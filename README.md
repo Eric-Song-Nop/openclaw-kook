@@ -138,7 +138,7 @@ openclaw config get channels.kook
 ## Links
 
 - [KOOK Developer Portal](https://developer.kookapp.cn/)
-- [KOOK API Reference](https://developer.kookapp.cn/doc/reference)
+- [KOOK API Reference](https://github.com/kaiheila/api-docs)
 - [KOOK Message API](https://developer.kookapp.cn/doc/http/message)
 - [KOOK Asset API](https://developer.kookapp.cn/doc/http/asset)
 - [KOOK Card Message Builder](https://www.kookapp.cn/tools/message-builder.html)
@@ -285,7 +285,7 @@ openclaw config get channels.kook
 ## 相关链接
 
 - [KOOK 开发者平台](https://developer.kookapp.cn/)
-- [KOOK API 参考文档](https://developer.kookapp.cn/doc/reference)
+- [KOOK API 参考文档](https://github.com/kaiheila/api-docs)
 - [KOOK 消息接口](https://developer.kookapp.cn/doc/http/message)
 - [KOOK 媒体资源接口](https://developer.kookapp.cn/doc/http/asset)
 - [KOOK 卡片消息编辑器](https://www.kookapp.cn/tools/message-builder.html)
