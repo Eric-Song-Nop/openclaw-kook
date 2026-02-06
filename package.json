@@ -1,0 +1,32 @@
+{
+  "name": "@openclaw/kook",
+  "version": "2026.2.4",
+  "description": "OpenClaw KOOK channel plugin",
+  "type": "module",
+  "dependencies": {
+    "zod": "^4.3.6"
+  },
+  "peerDependencies": {
+    "openclaw": "*"
+  },
+  "openclaw": {
+    "extensions": [
+      "./index.ts"
+    ],
+    "channel": {
+      "id": "kook",
+      "label": "KOOK",
+      "selectionLabel": "KOOK (开黑啦)",
+      "docsPath": "/channels/kook",
+      "docsLabel": "kook",
+      "blurb": "KOOK bot for Chinese gaming communities.",
+      "order": 76,
+      "quickstartAllowFrom": true
+    },
+    "install": {
+      "npmSpec": "@openclaw/kook",
+      "localPath": "extensions/kook",
+      "defaultChoice": "npm"
+    }
+  }
+}
