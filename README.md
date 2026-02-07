@@ -2,6 +2,8 @@
 
 OpenClaw channel plugin for [KOOK](https://www.kookapp.cn/) (开黑啦) — a Chinese gaming community chat platform.
 
+![Screenshot_2026-02-07-13-11-14-99_718c8cfc7a7dc4a17c28f7f62dcd3034](https://github.com/user-attachments/assets/2b9e2691-231d-4597-881f-7814fe5c740a)
+
 ## Features
 
 - WebSocket gateway with auto-reconnect and exponential backoff
