@@ -11,10 +11,92 @@ export type MonitorKookOpts = {
   accountId?: string;
 };
 
-const HEARTBEAT_INTERVAL_MS = 30_000;
+// 心跳配置（符合 KOOK 官方规范：30±5 秒随机间隔）
+const HEARTBEAT_BASE_INTERVAL_MS = 30_000;
+const HEARTBEAT_RANDOM_RANGE_MS = 5_000;
+const PONG_TIMEOUT_MS = 6_000; // pong 超时时间
 const HELLO_TIMEOUT_MS = 6_000;
 const RECONNECT_BASE_MS = 2_000;
 const MAX_RECONNECT_WAIT_MS = 60_000;
+
+// 心跳健康度监控配置
+const HEARTBEAT_HISTORY_SIZE = 10; // 保存最近 N 次心跳记录
+
+/**
+ * 心跳健康度统计数据
+ */
+interface HeartbeatStats {
+  totalSent: number;        // 总发送次数
+  totalReceived: number;    // 总接收次数
+  totalTimeout: number;     // 总超时次数
+  recentRtt: number[];      // 最近 N 次 RTT（往返时间，毫秒）
+  lastPingTime: number;     // 最后一次 ping 发送时间
+  lastPongTime: number;     // 最后一次 pong 接收时间
+}
+
+/**
+ * 创建新的心跳统计数据
+ */
+function createHeartbeatStats(): HeartbeatStats {
+  return {
+    totalSent: 0,
+    totalReceived: 0,
+    totalTimeout: 0,
+    recentRtt: [],
+    lastPingTime: 0,
+    lastPongTime: 0,
+  };
+}
+
+/**
+ * 记录心跳 ping 发送
+ */
+function recordPingSent(stats: HeartbeatStats): void {
+  stats.totalSent++;
+  stats.lastPingTime = Date.now();
+}
+
+/**
+ * 记录心跳 pong 接收并计算 RTT
+ */
+function recordPongReceived(stats: HeartbeatStats): number | null {
+  stats.totalReceived++;
+  const now = Date.now();
+  const rtt = now - stats.lastPingTime;
+  stats.lastPongTime = now;
+
+  // 保存到历史记录（只保留最近 N 次）
+  stats.recentRtt.push(rtt);
+  if (stats.recentRtt.length > HEARTBEAT_HISTORY_SIZE) {
+    stats.recentRtt.shift();
+  }
+
+  return rtt;
+}
+
+/**
+ * 记录心跳超时
+ */
+function recordPongTimeout(stats: HeartbeatStats): void {
+  stats.totalTimeout++;
+}
+
+/**
+ * 计算平均 RTT
+ */
+function getAverageRtt(stats: HeartbeatStats): number {
+  if (stats.recentRtt.length === 0) return 0;
+  const sum = stats.recentRtt.reduce((a, b) => a + b, 0);
+  return Math.round(sum / stats.recentRtt.length);
+}
+
+/**
+ * 生成随机心跳间隔（25-35 秒，符合 KOOK 官方规范）
+ */
+function getRandomHeartbeatInterval(): number {
+  const randomOffset = (Math.random() * 2 - 1) * HEARTBEAT_RANDOM_RANGE_MS;
+  return HEARTBEAT_BASE_INTERVAL_MS + randomOffset;
+}
 
 async function fetchBotId(opts: KookApiOptions): Promise<string | undefined> {
   try {
@@ -53,6 +135,7 @@ async function connectWebSocket(params: {
   let sn = 0;
   let sessionId = "";
   let reconnectAttempt = 0;
+  const heartbeatStats = createHeartbeatStats(); // 心跳健康度统计
 
   const connect = async (): Promise<void> => {
     if (abortSignal?.aborted) {
@@ -72,6 +155,7 @@ async function connectWebSocket(params: {
     return new Promise<void>((resolve, reject) => {
       const ws = new WebSocket(gatewayUrl);
       let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+      let pongTimeoutTimer: ReturnType<typeof setTimeout> | null = null;
       let helloTimer: ReturnType<typeof setTimeout> | null = null;
       let resolved = false;
 
@@ -79,6 +163,10 @@ async function connectWebSocket(params: {
         if (heartbeatTimer) {
           clearInterval(heartbeatTimer);
           heartbeatTimer = null;
+        }
+        if (pongTimeoutTimer) {
+          clearTimeout(pongTimeoutTimer);
+          pongTimeoutTimer = null;
         }
         if (helloTimer) {
           clearTimeout(helloTimer);
@@ -97,6 +185,46 @@ async function connectWebSocket(params: {
         if (!resolved) {
           resolved = true;
           resolve();
+        }
+      };
+
+      /**
+       * 发送心跳 ping 并启动超时检测
+       */
+      const sendHeartbeat = () => {
+        try {
+          // 记录 ping 发送
+          recordPingSent(heartbeatStats);
+
+          // 发送心跳 ping
+          ws.send(JSON.stringify({ s: 2, sn }));
+
+          // 记录 ping 发送日志
+          log(`kook[${accountId}]: ping sent, sn=${sn}`);
+
+          // 启动 pong 超时检测（6 秒）
+          if (pongTimeoutTimer) {
+            clearTimeout(pongTimeoutTimer);
+          }
+          pongTimeoutTimer = setTimeout(() => {
+            // pong 超时，记录并主动断开连接
+            recordPongTimeout(heartbeatStats);
+            logError(
+              `kook[${accountId}]: pong timeout (${PONG_TIMEOUT_MS}ms), ` +
+              `stats: sent=${heartbeatStats.totalSent}, ` +
+              `received=${heartbeatStats.totalReceived}, ` +
+              `timeouts=${heartbeatStats.totalTimeout}, ` +
+              `avgRtt=${getAverageRtt(heartbeatStats)}ms`
+            );
+            cleanup();
+            abortSignal?.removeEventListener("abort", handleAbort);
+            if (!resolved) {
+              resolved = true;
+              scheduleReconnect().then(resolve, reject);
+            }
+          }, PONG_TIMEOUT_MS);
+        } catch (err) {
+          logError(`kook[${accountId}]: heartbeat send failed: ${String(err)}`);
         }
       };
 
@@ -139,14 +267,19 @@ async function connectWebSocket(params: {
               sessionId = (helloData.session_id as string) ?? sessionId;
               log(`kook[${accountId}]: hello received, session=${sessionId}`);
 
-              // Start heartbeat
-              heartbeatTimer = setInterval(() => {
-                try {
-                  ws.send(JSON.stringify({ s: 2, sn }));
-                } catch (err) {
-                  logError(`kook[${accountId}]: heartbeat send failed: ${String(err)}`);
-                }
-              }, HEARTBEAT_INTERVAL_MS);
+              // 启动心跳（使用随机间隔，符合 KOOK 官方规范）
+              const startHeartbeat = () => {
+                const interval = getRandomHeartbeatInterval();
+                log(`kook[${accountId}]: heartbeat started (interval=${Math.round(interval / 1000)}s)`);
+                heartbeatTimer = setInterval(() => {
+                  sendHeartbeat();
+                }, interval);
+              };
+
+              // 立即发送第一次心跳
+              sendHeartbeat();
+              // 然后启动定时心跳
+              startHeartbeat();
               break;
             }
 
@@ -186,6 +319,20 @@ async function connectWebSocket(params: {
 
             case 3: {
               // Pong - heartbeat acknowledged
+              if (pongTimeoutTimer) {
+                clearTimeout(pongTimeoutTimer);
+                pongTimeoutTimer = null;
+              }
+
+              const rtt = recordPongReceived(heartbeatStats);
+              if (rtt !== null) {
+                const avgRtt = getAverageRtt(heartbeatStats);
+                log(
+                  `kook[${accountId}]: pong received, sn=${sn}, rtt=${rtt}ms, ` +
+                  `avgRtt=${avgRtt}ms, stats: sent=${heartbeatStats.totalSent}, ` +
+                  `received=${heartbeatStats.totalReceived}, timeouts=${heartbeatStats.totalTimeout}`
+                );
+              }
               break;
             }
 
