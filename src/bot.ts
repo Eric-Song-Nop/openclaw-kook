@@ -303,11 +303,14 @@ export async function handleKookMessage(params: {
       OriginatingTo: kookTo,
     });
 
+    // For DMs, target_id is the bot's own user ID, so we reply to senderId instead
+    const replyTarget = isGroup ? channelId : senderId;
+
     const { dispatcher, replyOptions, markDispatchIdle } = createKookReplyDispatcher({
       cfg,
       agentId: route.agentId,
       runtime: runtime as RuntimeEnv,
-      channelId,
+      channelId: replyTarget,
       replyToMessageId: event.msg_id,
       accountId: account.accountId,
       isDm: !isGroup,
