@@ -11,7 +11,7 @@ function listConfiguredAccountIds(cfg: ClawdbotConfig): string[] {
   if (!kookCfg?.accounts) {
     return [];
   }
-  return Object.keys(kookCfg.accounts);
+  return Object.keys(kookCfg.accounts).map(normalizeAccountId);
 }
 
 export function listKookAccountIds(cfg: ClawdbotConfig): string[] {
@@ -23,13 +23,24 @@ export function resolveDefaultKookAccountId(_cfg: ClawdbotConfig): string {
   return DEFAULT_ACCOUNT_ID;
 }
 
+function findAccountOverride(kookCfg: KookConfig, normalizedId: string) {
+  if (!kookCfg.accounts) return undefined;
+  // Try direct lookup first
+  if (kookCfg.accounts[normalizedId]) return kookCfg.accounts[normalizedId];
+  // Fall back to normalized key scan
+  for (const [key, value] of Object.entries(kookCfg.accounts)) {
+    if (normalizeAccountId(key) === normalizedId) return value;
+  }
+  return undefined;
+}
+
 function mergeKookAccountConfig(cfg: ClawdbotConfig, accountId: string): KookConfig {
   const kookCfg = getKookConfig(cfg) ?? ({} as KookConfig);
   if (accountId === DEFAULT_ACCOUNT_ID) {
     return kookCfg;
   }
 
-  const accountOverride = kookCfg.accounts?.[accountId];
+  const accountOverride = findAccountOverride(kookCfg, accountId);
   if (!accountOverride) {
     return kookCfg;
   }
