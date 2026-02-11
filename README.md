@@ -1,4 +1,4 @@
-# @openclaw/kook
+# @mobvibe/openclaw-kook-channel
 
 OpenClaw channel plugin for [KOOK](https://www.kookapp.cn/) (开黑啦) — a Chinese gaming community chat platform.
 
@@ -27,8 +27,8 @@ Go to the [KOOK Developer Portal](https://developer.kookapp.cn/) and create a bo
 ### 2. Install the plugin
 
 ```bash
-# From npm(won't work for now, this plugin is not published yet)
-openclaw plugins install @openclaw/kook
+# From npm
+openclaw plugins install @mobvibe/openclaw-kook-channel
 
 # Or link locally for development
 openclaw plugins install -l .
@@ -147,7 +147,7 @@ openclaw config get channels.kook
 
 ---
 
-# @openclaw/kook
+# @mobvibe/openclaw-kook-channel
 
 [KOOK](https://www.kookapp.cn/)（开黑啦）—— OpenClaw 频道插件，适用于中文游戏社区聊天平台。
 
@@ -175,7 +175,7 @@ openclaw config get channels.kook
 
 ```bash
 # 从 npm 安装
-openclaw plugins install @openclaw/kook
+openclaw plugins install @mobvibe/openclaw-kook-channel
 
 # 或本地开发链接
 openclaw plugins install -l .

@@ -1,5 +1,5 @@
 {
-  "name": "@openclaw/kook",
+  "name": "@mobvibe/openclaw-kook-channel",
   "version": "2026.2.4",
   "description": "OpenClaw KOOK channel plugin",
   "type": "module",
@@ -24,7 +24,7 @@
       "quickstartAllowFrom": true
     },
     "install": {
-      "npmSpec": "@openclaw/kook",
+      "npmSpec": "@mobvibe/openclaw-kook-channel",
       "localPath": "extensions/kook",
       "defaultChoice": "npm"
     }
