@@ -16,15 +16,11 @@ function listConfiguredAccountIds(cfg: ClawdbotConfig): string[] {
 
 export function listKookAccountIds(cfg: ClawdbotConfig): string[] {
   const ids = listConfiguredAccountIds(cfg);
-  if (ids.length === 0) {
-    return [DEFAULT_ACCOUNT_ID];
-  }
-  return [...ids].toSorted((a, b) => a.localeCompare(b));
+  return [DEFAULT_ACCOUNT_ID, ...ids].toSorted((a, b) => a.localeCompare(b));
 }
 
-export function resolveDefaultKookAccountId(cfg: ClawdbotConfig): string {
-  const ids = listConfiguredAccountIds(cfg);
-  return ids.length > 0 ? ids[0] : DEFAULT_ACCOUNT_ID;
+export function resolveDefaultKookAccountId(_cfg: ClawdbotConfig): string {
+  return DEFAULT_ACCOUNT_ID;
 }
 
 function mergeKookAccountConfig(cfg: ClawdbotConfig, accountId: string): KookConfig {
