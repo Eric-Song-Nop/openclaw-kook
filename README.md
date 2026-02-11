@@ -27,7 +27,7 @@ Go to the [KOOK Developer Portal](https://developer.kookapp.cn/) and create a bo
 ### 2. Install the plugin
 
 ```bash
-# From npm
+# From npm(won't work for now, this plugin is not published yet)
 openclaw plugins install @openclaw/kook
 
 # Or link locally for development
