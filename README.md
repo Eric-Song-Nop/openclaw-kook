@@ -1,3 +1,5 @@
+***[Kaiheila Official OpenClaw channel](https://github.com/kaiheila/openclaw-kook/) is under more active development, thus this repo is archived***
+
 # @mobvibe/openclaw-kook-channel
 
 OpenClaw channel plugin for [KOOK](https://www.kookapp.cn/) (开黑啦) — a Chinese gaming community chat platform.
